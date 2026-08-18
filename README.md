@@ -6,6 +6,9 @@
 > but not, because storage limits, but you can connect a NAS to this and it should work fine :)
 > anyway, for any help you can join the blirox.cc discord, and check out other services @ https://blirox.cc -> https://discord.gg/dQY9ySFmJH
 
+<img width="1130" height="642" alt="image" src="https://github.com/user-attachments/assets/2ba043a6-c9de-4f10-99af-0822a44e33bb" />
+
+
 # another thing
 
 using this project please credit me or my github, that would be so amazing if you did <3
