@@ -1,0 +1,21 @@
+# cloudflare tunnel ingress. first match wins, so the 404 catch-all stays last.
+# fill in your own tunnel id + credentials path (both from `cloudflared tunnel
+# create`). the ingress order below is the only part specific to this app.
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /home/YOUR_USER/.cloudflared/YOUR_TUNNEL_ID.json
+
+ingress:
+  # app: pages, uploads, admin
+  - hostname: files.example.com
+    service: http://localhost:4001
+  # file bytes. own hostname so it can point at other infra later without
+  # breaking share links already out
+  - hostname: us01.example.com
+    service: http://localhost:4001
+  # dev api + docs. same app process — next rewrites route the api host to
+  # /api/v1/* + the docs page. split out so it can move or get its own rate
+  # limits without touching any app url
+  - hostname: api.example.com
+    service: http://localhost:4001
+
+  - service: http_status:404

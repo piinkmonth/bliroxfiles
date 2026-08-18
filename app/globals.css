@@ -1,0 +1,364 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Themes
+
+   Each palette is a set of "R G B" triplets so Tailwind can compose them with
+   alpha via rgb(var(--c-x) / <alpha-value>). Adding a theme means adding one
+   block here and one entry to THEMES in components/theme.ts — nothing else.
+--------------------------------------------------------------------------- */
+
+/*
+ * Monochrome shells, one warm accent each.
+ *
+ * The backgrounds are cold — white snow, grey fur, blue twilight. A warm
+ * accent is the only colour in the interface, so it reads as a deliberate
+ * choice against the photography instead of decoration. No gradients live
+ * anywhere in this file; every fill is flat.
+ */
+
+:root,
+[data-theme='ash'] {
+  --c-bg: 10 10 10;
+  --c-surface: 22 21 20;
+  --c-raised: 32 31 29;
+  --c-border: 58 55 51;
+  --c-text: 242 239 233;
+  --c-muted: 150 145 137;
+  --c-accent: 217 119 6;
+  --c-accent-fg: 12 10 6;
+  --c-success: 132 165 90;
+  --c-warn: 214 158 46;
+  --c-danger: 214 88 62;
+}
+
+[data-theme='ember'] {
+  --c-bg: 13 10 9;
+  --c-surface: 26 20 18;
+  --c-raised: 37 29 26;
+  --c-border: 66 52 46;
+  --c-text: 245 239 232;
+  --c-muted: 158 145 134;
+  --c-accent: 194 65 12;
+  --c-accent-fg: 250 240 232;
+  --c-success: 125 158 88;
+  --c-warn: 206 152 44;
+  --c-danger: 206 76 58;
+}
+
+[data-theme='moss'] {
+  --c-bg: 10 12 10;
+  --c-surface: 20 24 20;
+  --c-raised: 30 35 29;
+  --c-border: 55 63 53;
+  --c-text: 238 242 236;
+  --c-muted: 143 153 140;
+  --c-accent: 132 154 74;
+  --c-accent-fg: 12 15 10;
+  --c-success: 132 154 74;
+  --c-warn: 202 156 52;
+  --c-danger: 200 88 70;
+}
+
+/* No accent hue at all — the grey is the accent. */
+[data-theme='slate'] {
+  --c-bg: 12 13 14;
+  --c-surface: 23 25 27;
+  --c-raised: 33 36 39;
+  --c-border: 60 65 70;
+  --c-text: 237 240 242;
+  --c-muted: 145 152 159;
+  --c-accent: 226 231 235;
+  --c-accent-fg: 16 18 20;
+  --c-success: 138 168 128;
+  --c-warn: 198 165 96;
+  --c-danger: 208 108 96;
+}
+
+[data-theme='bone'] {
+  --c-bg: 242 239 233;
+  --c-surface: 250 248 243;
+  --c-raised: 234 230 222;
+  --c-border: 206 199 187;
+  --c-text: 24 22 19;
+  --c-muted: 108 101 92;
+  --c-accent: 180 95 8;
+  --c-accent-fg: 252 249 244;
+  --c-success: 90 118 56;
+  --c-warn: 158 114 20;
+  --c-danger: 172 62 42;
+}
+
+[data-theme='paper'] {
+  --c-bg: 250 249 246;
+  --c-surface: 255 255 255;
+  --c-raised: 242 240 235;
+  --c-border: 214 210 202;
+  --c-text: 20 20 20;
+  --c-muted: 105 102 97;
+  --c-accent: 30 30 30;
+  --c-accent-fg: 252 252 252;
+  --c-success: 78 110 50;
+  --c-warn: 150 108 18;
+  --c-danger: 168 54 38;
+}
+
+/* ------------------------------------------------------------------------- */
+
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
+  color-scheme: dark;
+}
+
+[data-theme='bone'],
+[data-theme='paper'] {
+  color-scheme: light;
+}
+
+* {
+  border-color: rgb(var(--c-border));
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: rgb(var(--c-bg));
+  color: rgb(var(--c-text));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Theme switches shouldn't flash, but colour transitions during a page load
+   look like a bug. Only enable them once the app has hydrated. */
+.theme-ready * {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+::selection {
+  background: rgb(var(--c-accent) / 0.3);
+}
+
+/* Scrollbars ------------------------------------------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-border)) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-border));
+  border-radius: 6px;
+  border: 2px solid rgb(var(--c-bg));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--c-muted) / 0.6);
+}
+
+/* Focus ------------------------------------------------------------------ */
+
+:focus-visible {
+  outline: 2px solid rgb(var(--c-accent));
+  outline-offset: 2px;
+}
+
+/* Snow -------------------------------------------------------------------
+   Pure CSS: each layer is one element painting several dots with radial
+   gradients, then translating downward. Three layers at different sizes and
+   speeds read as depth. No JS, no per-flake DOM nodes, no canvas.
+------------------------------------------------------------------------- */
+
+.snow-layer {
+  position: absolute;
+  inset: -20% 0 0 0;
+  height: 120%;
+  background-repeat: repeat;
+  will-change: transform;
+  animation-name: snow-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.snow-layer-1 {
+  background-image:
+    radial-gradient(2px 2px at 12% 18%, rgb(255 255 255 / 0.9), transparent),
+    radial-gradient(1.5px 1.5px at 47% 62%, rgb(255 255 255 / 0.7), transparent),
+    radial-gradient(2px 2px at 78% 31%, rgb(255 255 255 / 0.85), transparent),
+    radial-gradient(1px 1px at 91% 77%, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 28% 88%, rgb(255 255 255 / 0.75), transparent);
+  background-size: 420px 420px;
+  animation-duration: 22s;
+}
+
+.snow-layer-2 {
+  background-image:
+    radial-gradient(3px 3px at 22% 42%, rgb(255 255 255 / 0.7), transparent),
+    radial-gradient(2.5px 2.5px at 65% 15%, rgb(255 255 255 / 0.6), transparent),
+    radial-gradient(3px 3px at 88% 58%, rgb(255 255 255 / 0.65), transparent),
+    radial-gradient(2px 2px at 41% 81%, rgb(255 255 255 / 0.5), transparent);
+  background-size: 620px 620px;
+  animation-duration: 34s;
+  animation-delay: -8s;
+}
+
+.snow-layer-3 {
+  background-image:
+    radial-gradient(4px 4px at 35% 25%, rgb(255 255 255 / 0.45), transparent),
+    radial-gradient(3.5px 3.5px at 72% 68%, rgb(255 255 255 / 0.4), transparent),
+    radial-gradient(4px 4px at 15% 74%, rgb(255 255 255 / 0.35), transparent);
+  background-size: 900px 900px;
+  animation-duration: 52s;
+  animation-delay: -20s;
+  filter: blur(1px);
+}
+
+@keyframes snow-fall {
+  from {
+    transform: translate3d(0, -20%, 0);
+  }
+  to {
+    transform: translate3d(-40px, 20%, 0);
+  }
+}
+
+/* Respect a stated preference for less motion: hold the snow still. */
+@media (prefers-reduced-motion: reduce) {
+  .snow-layer {
+    animation: none;
+  }
+
+  .theme-ready * {
+    transition: none !important;
+  }
+
+  .animate-fade-up,
+  .animate-pulse,
+  .animate-spin {
+    animation: none !important;
+  }
+}
+
+/* Component primitives --------------------------------------------------- */
+
+@layer components {
+  /*
+   * Panels are flat and near-opaque, defined by a border rather than a shadow
+   * or a sheen. A slight blur remains only because they sit over photographs;
+   * it is not a decorative effect and there is no gradient in it.
+   */
+  .card {
+    @apply rounded-card border border-border bg-surface/[0.94] backdrop-blur-md;
+  }
+
+  /* Fully opaque for dense data (tables, logs) where any blur hurts reading. */
+  .card-solid {
+    @apply rounded-card border border-border bg-surface;
+  }
+
+  /*
+   * A card that is also a link or button. The accent-tinted border and a lift
+   * to the raised fill on hover are the whole affordance — flat, no shadow.
+   */
+  .card-interactive {
+    @apply card transition-colors hover:border-accent/60 hover:bg-raised/[0.94];
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded px-4 py-2 text-sm font-medium
+           transition-colors disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  /* Compact button for toolbars and dense rows. */
+  .btn-sm {
+    @apply gap-1.5 px-2.5 py-1 text-xs;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent text-accent-fg hover:brightness-110;
+  }
+
+  .btn-ghost {
+    @apply btn border border-border bg-transparent text-text hover:border-muted hover:bg-raised;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger text-white hover:brightness-110;
+  }
+
+  .input {
+    @apply w-full rounded border border-border bg-raised px-3 py-2 text-sm text-text
+           transition-colors placeholder:text-muted focus:border-accent
+           focus:ring-1 focus:ring-accent/40 focus:outline-none;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium;
+  }
+
+  /* Tinted badge variants. Flat fills at low alpha so they read on any surface. */
+  .badge-accent {
+    @apply badge bg-accent/15 text-accent;
+  }
+
+  .badge-success {
+    @apply badge bg-success/15 text-success;
+  }
+
+  .badge-warn {
+    @apply badge bg-warn/15 text-warn;
+  }
+
+  .badge-danger {
+    @apply badge bg-danger/15 text-danger;
+  }
+
+  .badge-neutral {
+    @apply badge bg-raised text-muted;
+  }
+
+  /*
+   * Inline primitives the reference docs lean on: `.kbd` for a key or method
+   * verb, `.chip` for a scope/tag pill. Both mono, both flat.
+   */
+  .kbd {
+    @apply inline-flex items-center rounded border border-border bg-raised px-1.5 py-0.5
+           font-mono text-xs text-text;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded border border-border bg-surface px-2 py-0.5
+           font-mono text-xs text-muted;
+  }
+
+  /* Display heading: tight tracking on the mono face, for page titles. */
+  .display {
+    @apply font-mono font-semibold tracking-tight;
+  }
+
+  /* Hairline rule used instead of a heading underline in a few places. */
+  .rule {
+    @apply h-px w-full bg-border;
+  }
+}

@@ -1,0 +1,30 @@
+# Secrets. Never commit these — a leaked client secret or encryption key has to
+# be rotated, not deleted, because git keeps the history.
+.env
+.env.*
+!.env.example
+
+# Local storage root used when no drive is mounted (development only).
+.devdata/
+
+# Build output and dependencies
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# The logo and backgrounds are yours; keep them, but ignore stray uploads that
+# land in public/ during testing.
+public/uploads/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
