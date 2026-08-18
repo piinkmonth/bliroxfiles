@@ -1,14 +1,19 @@
 # Blirox Files
 
-a self-hosted file host you actually own. invite-only, end-to-end encryption for
-the stuff that needs it, a real moderation + abuse story, and a developer API —
-all running out of a single Next.js process against SQLite and a disk. built to
-run on a box at home behind a cloudflare tunnel (or a cheap VPS), not a rack.
+> backstory: basically ran blirox files thru a tunnel for like a bit, but running thru a tunnel aka cloudflared 
+> makes it very slow, or slow at startup then speeds up, but if your gonna host a file hosting service
+> probably should have around a 1Gbps connection, now this can be fully hosted on a VPS, which is reccomended
+> but not, because storage limits, but you can connect a NAS to this and it should work fine :)
+> anyway, for any help you can join the blirox.cc discord, and check out other services @ https://blirox.cc -> https://discord.gg/dQY9ySFmJH
 
-> heads up: this is my real deployment, opened up. it's opinionated and
-> it's built around a home server on ethernet. that shapes a bunch of decisions
-> (chunked uploads, a shared egress budget, HTTP/1.1-only proxying). where a
-> choice looks weird, there's usually a comment explaining why
+# another thing
+
+using this project please credit me or my github, that would be so amazing if you did <3
+
+# what is in here?
+
+> well this is the same build used in my production build, so nothing really changes, except the secrets arent on the github build, you need that yourself
+> anything in here was completely made by me :) ; and contributors, if they exist
 
 ---
 
@@ -32,40 +37,39 @@ run on a box at home behind a cloudflare tunnel (or a cheap VPS), not a rack.
 ## what you get
 
 **uploading + sharing**
-- chunked uploads that survive a flaky connection — a 15gb file goes up as ~240
-  resumable 64mb chunks, reassembled + hashed server-side
-- share links with optional password, expiry, and burn-after-N-downloads
-- folders, galleries, and per-folder collaborators (viewer / contributor)
-- image + video previews that unfurl properly in discord/slack (thumbnails are
-  re-encoded by sharp, so they carry none of the original's metadata — no EXIF
-  GPS leaking to a link unfurler)
+
+  so with this, it chunks uploads, and has limits from 15GB/file in any accounts, and resumes around 64mb chunks (dont quote me on this)
+  sharing;
+  - can share stuff like encrypted folders, it decrypts within the browser
+  - folders, galleries, and per-folder collabs
+  - image and video previews
 
 **end-to-end encryption**
-- encrypted folders: files are encrypted in the browser with a passphrase before
+- encrypted folders; files are encrypted in the browser with a passphrase before
   they ever leave your machine (AES-GCM, PBKDF2-SHA256, 600k iterations)
-- the server only ever sees ciphertext for those — decryption happens client-side
+- the server only ever sees ciphertext for those
 
 **accounts + access**
 - invite-only registration with a full accountability chain (every account
-  records who vouched for it)
+  records who vouched for it by username that signed up)
 - google sign-in (optional), TOTP 2FA, and a proper session model
 - per-account quotas with deliberate overcommit
+[google sign in requires you to make a google cloud project i think? idk i forgot >.<]
 
 **running it sanely**
-- a shared egress budget so one big download can't saturate your home uplink
+- a shared egress budget so one big download can't saturate your home uplink (this was entirely tested with 750Mbps, behind CGNAT)
 - a hard "refuse to boot if the uploads drive isn't mounted" safety check
 - an admin panel: users, invites, moderation queue, audit log, egress charts,
   appearance/branding
-- a developer API (v1) with an OpenAPI spec, served from its own hostname
+- a developer API (v1) with an OpenAPI spec, served from its own hostname [https://api.blirox.cc -> same api as in here]
 
-**abuse handling** — see [moderation](#moderation--the-legal-part). it's a real
-system, not a checkbox.
+**abuse handling** — see [moderation](#moderation--the-legal-part). legality is probably something you should read for your own sake
 
 ---
 
-## how it works
+## how it works!
 
-it's one Next.js app. there's no separate backend, no microservices, no queue.
+it's one Next.js app. there's no separate backend [though if your smart enough, host a node of it], no microservices and no queue
 
 ```
                     ┌─────────────────────────────────────────┐
@@ -96,13 +100,15 @@ owns the schema; `lib/storage.ts` owns the bytes.
 **uploads are chunked because cloudflare caps request bodies at 100mb.** the
 client (`components/Uploader.tsx`) slices the file, PUTs each chunk, and the
 server reassembles + SHA-256s the result on `complete`. this is also why the app
-is happy behind a tunnel with a small body limit.
+is happy behind a tunnel with a small body limit. 
+
+ -one note is like IDK if cloudflared still has this limit, i assumed they did when making this, so dont quote me on this either- :D
 
 **downloads share an egress budget, they aren't capped per-download.** on a home
 connection bandwidth is the real constraint, not disk. `lib/egress.ts` hands out
 a shared budget so one person alone gets the whole pipe, and eight split it —
 instead of the naive "cap each download and let concurrency multiply it" that
-gets both cases wrong. there's a per-IP daily cap on top.
+gets both cases wrong. there's a per-IP daily cap on top
 
 **file bytes are served from their own hostname** (`us01.example.com`), split
 from the app host (`files.example.com`). two reasons: you can move file serving
@@ -112,11 +118,11 @@ a locked-down sandbox CSP so it can never run as the app.
 
 **the developer API rides the same process** on a third hostname
 (`api.example.com`). Next rewrites (`next.config.js`) route that host to
-`/api/v1/*` and the docs page — no duplicate server.
+`/api/v1/*` and the docs page so there is no duplicate server.
 
 if you read one file to understand the shape of things, read
 [lib/config.ts](lib/config.ts). it's the central config and the comments there
-explain most of the tradeoffs.
+explain most of the tradeoffs . . .
 
 ---
 
@@ -134,7 +140,7 @@ explain most of the tradeoffs.
 ## quick start (local dev)
 
 ```bash
-git clone <this repo>
+git clone [https://github.com/piinkmonth/bliroxfiles](https://github.com/piinkmonth/bliroxfiles.git)
 cd blirox-files
 npm install
 npm run dev
@@ -147,19 +153,19 @@ reachable from outside and nothing you do here touches a real drive.
 make yourself an account (there's no open signup):
 
 ```bash
-node scripts/create-admin.mjs <username>
+node scripts/create-admin.mjs putyourusernamehere
 ```
 
-it'll prompt for a password. sign in, and you're an admin — invites, moderation,
-appearance, all of it.
+it'll prompt for a password. sign in, and you're an admin; invites, moderation,
+appearance, all of it instantly
 
 ---
 
 ## going live
 
 the full walkthrough — mounting the drive, env, the systemd unit, cloudflare
-tunnel routes, google sign-in, malware scanning, the stuff that'll bite you — is
-in **[SETUP.md](SETUP.md)**. read it in order; every step needs sudo so none of
+tunnel routes, google sign-in, malware scanning, the stuff that'll bite you in the ass is
+in **[SETUP.md](SETUP.md)**. read it in order; every step needs **sudo** so none of
 it happens by accident.
 
 if you outgrow the cloudflare tunnel (the 100mb body cap, the HTTP/2
@@ -226,10 +232,9 @@ the human docs at the api host root. the generator lives in
 
 the short tour (details are in the code comments, which is where they belong):
 
-- **invite-only.** no open signup. every account records its inviter, so there's
-  an accountability chain when something goes wrong.
+- **invite-only.** well yes
 - **end-to-end encryption** for encrypted folders — AES-GCM with a
-  PBKDF2-SHA256-derived key (600k iters), done in the browser. the server stores
+  PBKDF2-SHA256-derived key (600k iters), done in the browser, the server stores
   ciphertext and never sees the passphrase.
 - **2FA** via TOTP, and **google oauth** with a deliberate no-adopt-by-email
   rule (see SETUP.md for why matching on a self-asserted email would be a
@@ -246,7 +251,7 @@ the short tour (details are in the code comments, which is where they belong):
   [deploy/](deploy/) are load-bearing here).
 - **CSRF** via origin checks + `sameSite` cookies.
 
-none of this is exotic. it's mostly about being careful with the boring parts.
+none of this is exotic. it's mostly about being careful with the boring parts because if you dont read it ur cooked bruh
 
 ---
 
@@ -257,11 +262,8 @@ something you have a legal obligation to deal with. this ships with the tooling
 to handle that, but the tooling **tracks** your responsibilities — it doesn't
 discharge them.
 
-built in: a report button on every file, a moderation queue that sorts CSAM
-above everything, SHA-256 + perceptual-hash blocklisting so removed content
-can't be re-uploaded, automatic uploader suspension on CSAM action, frozen
-evidence snapshots that survive account deletion, an append-only audit log, and
-NCMEC submission tracking with the 90-day preservation clock.
+when reporting is done on a file for CSAM, it is taken very seriously, so just know that
+usually a report shows up in the panel, you DO have to review it yourself unless you have a algorithm to auto-review
 
 **if you're a US operator, read the "safety obligations" section of
 [SETUP.md](SETUP.md) before you go live.** 18 U.S.C. § 2258A makes reporting
@@ -288,21 +290,8 @@ components/     shared react components (uploader, media player, nav, ...)
 scripts/        create-admin, the prod start wrapper
 deploy/         nginx / cloudflared / sysctl templates + the VPS guide
 SETUP.md        the going-live walkthrough
-.env.example    every config var, documented
+.env.example    every config var, documented # MAKE SURE TO CHANGE THIS TO .env.production WHEN YOU FINISH IT
 ```
-
----
-
-## contributing
-
-the code comments are written the way the owner actually talks — lowercase,
-casual, short, and honest about *why* something is the way it is rather than
-restating what the code plainly does. if you send a PR, match that voice. there's
-a short spec in [.notes-style.md](.notes-style.md) with the rules and examples.
-
-the one hard rule: comments explain the *why* and flag the gotchas. security and
-safety warnings keep their meaning — you can make a warning shorter, never
-quieter.
 
 ---
 
