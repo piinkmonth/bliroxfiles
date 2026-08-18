@@ -63,15 +63,16 @@ export function verifyPassword(password: string, stored: string): boolean {
 // sessions
 // ---------------------------------------------------------------------------
 
-export function createSession(userId: string, ip: string | null, ua: string | null): string {
+export async function createSession(userId: string, ip: string | null, ua: string | null): Promise<string> {
   const token = newSessionToken()
   const now = Date.now()
+  const country = await clientCountry()
   db()
     .prepare(
       `INSERT INTO sessions (token, user_id, ip, user_agent, country, created_at, expires_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(token, userId, ip, ua, clientCountry(), now, now + LIMITS.sessionTtlMs)
+    .run(token, userId, ip, ua, country, now, now + LIMITS.sessionTtlMs)
   return token
 }
 
@@ -84,7 +85,7 @@ export function destroyAllSessions(userId: string): void {
   db().prepare(`DELETE FROM sessions WHERE user_id = ?`).run(userId)
 }
 
-export function userForToken(token: string): UserRow | null {
+export async function userForToken(token: string): Promise<UserRow | null> {
   const row = db()
     .prepare(
       `SELECT u.*, s.country AS session_country FROM sessions s
@@ -96,7 +97,7 @@ export function userForToken(token: string): UserRow | null {
   if (!row) return null
   // banned/suspended keeps its rows but loses all access
   if (row.status !== 'active') return null
-  if (!passesGeoGuard(token, row, row.session_country)) return null
+  if (!(await passesGeoGuard(token, row, row.session_country))) return null
   return row
 }
 
@@ -121,14 +122,14 @@ export function userForToken(token: string): UserRow | null {
  * a mismatch. failing open matters here: treating "unknown" as a change would
  * log everyone out on the first request after the deploy that added the column.
  */
-function passesGeoGuard(
+async function passesGeoGuard(
   token: string,
   user: UserRow,
   sessionCountry: string | null,
-): boolean {
+): Promise<boolean> {
   if (!user.geo_guard) return true
 
-  const now = clientCountry()
+  const now = await clientCountry()
   if (!now) return true
 
   if (!sessionCountry) {
@@ -216,11 +217,11 @@ export function acknowledgeNotices(userId: string, ids: number[]): void {
 }
 
 /** current user from the request cookie, or null. */
-export function currentUser(): UserRow | null {
-  const token = cookies().get(SESSION_COOKIE)?.value
+export async function currentUser(): Promise<UserRow | null> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value
   if (!token) return null
 
-  const user = userForToken(token)
+  const user = await userForToken(token)
   if (user) touchLastSeen(user.id)
   return user
 }
@@ -239,8 +240,8 @@ export interface SessionSummary {
  * panel can mark the current one + revoke a specific other one — its already in
  * their own cookie and every row here belongs to them anyway.
  */
-export function sessionsForUser(userId: string): SessionSummary[] {
-  const current = cookies().get(SESSION_COOKIE)?.value ?? null
+export async function sessionsForUser(userId: string): Promise<SessionSummary[]> {
+  const current = (await cookies()).get(SESSION_COOKIE)?.value ?? null
   return (
     db()
       .prepare(
@@ -294,15 +295,15 @@ export class AuthError extends Error {
 }
 
 /** throws if theres no active session. */
-export function requireUser(): UserRow {
-  const user = currentUser()
+export async function requireUser(): Promise<UserRow> {
+  const user = await currentUser()
   if (!user) throw new AuthError('Sign in required', 401)
   return user
 }
 
 /** throws if the session lacks the given role. */
-export function requireRole(min: Role): UserRow {
-  const user = requireUser()
+export async function requireRole(min: Role): Promise<UserRow> {
+  const user = await requireUser()
   if (!hasRole(user, min)) throw new AuthError('Not permitted', 403)
   return user
 }
@@ -316,8 +317,8 @@ export function requireRole(min: Role): UserRow {
  * listens on localhost behind the tunnel an outside client cant spoof it. keep
  * it bound to 127.0.0.1 and keep it that way.
  */
-export function clientIp(): string | null {
-  const h = headers()
+export async function clientIp(): Promise<string | null> {
+  const h = await headers()
   return h.get('cf-connecting-ip') ?? h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
 }
 
@@ -327,19 +328,19 @@ export function clientIp(): string | null {
  * before the tunnel. null when the header's missing (local dev) or cloudflare
  * couldnt resolve it, which it sends as "XX" or "T1" (tor exit nodes).
  */
-export function clientCountry(): string | null {
-  const code = headers().get('cf-ipcountry')
+export async function clientCountry(): Promise<string | null> {
+  const code = (await headers()).get('cf-ipcountry')
   if (!code || code === 'XX' || code === 'T1') return null
   return /^[A-Z]{2}$/.test(code) ? code : null
 }
 
 /** IP encrypted for storage. see lib/crypto.ts for why we dont hash it. */
-export function clientIpForStorage(): string | null {
-  return encryptIp(clientIp())
+export async function clientIpForStorage(): Promise<string | null> {
+  return encryptIp(await clientIp())
 }
 
-export function userAgent(): string | null {
-  return headers().get('user-agent')
+export async function userAgent(): Promise<string | null> {
+  return (await headers()).get('user-agent')
 }
 
 /** sweep expired sessions + acked notices. cheap, called on a timer. */

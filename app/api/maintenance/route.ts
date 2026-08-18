@@ -19,7 +19,7 @@ export const maxDuration = 600
  * be full of half-finished uploads.
  */
 export const POST = route(async () => {
-  const admin = requireRole('admin')
+  const admin = await requireRole('admin')
 
   const staging = await sweepStaging()
   sweepExpired()

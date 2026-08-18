@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
  * password reset to fall back on.
  */
 export const DELETE = route(async () => {
-  const user = requireUser()
+  const user = await requireUser()
 
   if (!user.google_sub) return fail('This account is not linked to Google', 409)
 
@@ -39,7 +39,7 @@ export const DELETE = route(async () => {
     action: 'auth.google_unlink',
     targetType: 'user',
     targetId: user.id,
-    ip: clientIpForStorage(),
+    ip: await clientIpForStorage(),
   })
 
   return ok({ unlinked: true })

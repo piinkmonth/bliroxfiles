@@ -26,10 +26,11 @@ interface ReportRecord {
  * (for CSAM) suspends the uploader. `dismiss` closes the report and leaves the
  * file alone. Both are recorded against the moderator who did it.
  */
-export const POST = route(async (req: Request, { params }: { params: { id: string } }) => {
-  const mod = requireRole('mod')
+export const POST = route(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params
+  const mod = await requireRole('mod')
 
-  const report = db().prepare(`SELECT * FROM reports WHERE id = ?`).get(params.id) as
+  const report = db().prepare(`SELECT * FROM reports WHERE id = ?`).get(id) as
     | ReportRecord
     | undefined
   if (!report) return fail('Report not found', 404)

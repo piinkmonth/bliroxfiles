@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 interface Params {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 /**
@@ -25,13 +25,14 @@ interface Params {
  * again later.
  */
 export const POST = route(async (req: Request, { params }: Params) => {
-  const user = requireUser()
+  const { id } = await params
+  const user = await requireUser()
   const body = await jsonBody<{ enabled?: boolean }>(req)
   if (typeof body?.enabled !== 'boolean') return fail('enabled must be true or false')
 
   const folder = db()
     .prepare(`SELECT * FROM folders WHERE id = ? AND owner_id = ?`)
-    .get(params.id, user.id) as FolderRow | undefined
+    .get(id, user.id) as FolderRow | undefined
 
   if (!folder) return fail('Folder not found', 404)
 

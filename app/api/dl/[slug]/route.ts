@@ -24,7 +24,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 3600
 
 interface Params {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 // serve file bytes. reachable via the cdn/us01 hostnames + the app host — the
@@ -41,10 +41,11 @@ export const GET = route(async (req: Request, { params }: Params) => {
   // an opaque "failed to fetch", which is way worse to show someone than "this
   // link's been used up".
   const cors = corsHeaders(req)
+  const { slug } = await params
 
   const file = db()
     .prepare(`SELECT * FROM files WHERE slug = ?`)
-    .get(params.slug) as FileRow | undefined
+    .get(slug) as FileRow | undefined
 
   if (!file) return fail('File not found', 404, undefined, cors)
 
@@ -70,7 +71,7 @@ export const GET = route(async (req: Request, { params }: Params) => {
   // below, and being a folder collaborator isnt grounds to skip a per-file
   // password. access is the broader "can this person see the file at all" —
   // owner, or someone the folder got shared with.
-  const viewer = currentUser()
+  const viewer = await currentUser()
   const isOwner = !!viewer && viewer.id === file.owner_id
   const access = viewer ? fileAccess(file, viewer.id) : null
 
@@ -88,12 +89,12 @@ export const GET = route(async (req: Request, { params }: Params) => {
   // password-protected link needs the unlock cookie from /unlock. owner's exempt
   // — getting asked for a password on your own file is absurd.
   if (file.password_hash && !isOwner) {
-    if (cookies().get(unlockCookieName(file.id))?.value !== '1') {
+    if ((await cookies()).get(unlockCookieName(file.id))?.value !== '1') {
       return fail('This file is password protected', 401, undefined, cors)
     }
   }
 
-  const ip = clientIp()
+  const ip = await clientIp()
 
   if (ip && egressForIpToday(ip) > IP_DAILY_EGRESS_CAP) {
     return fail('Daily download limit reached for this address', 429, undefined, cors)

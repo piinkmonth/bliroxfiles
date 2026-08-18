@@ -12,7 +12,7 @@ interface PatchBody {
 }
 
 export const PATCH = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   const body = await jsonBody<PatchBody>(req)
   if (!body) return fail('Malformed request body')
 

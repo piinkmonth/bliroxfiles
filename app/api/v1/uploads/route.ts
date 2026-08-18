@@ -87,7 +87,7 @@ export const POST = apiRoute(
         now,
         now + LIMITS.stagingTtlMs,
         folderId,
-        clientCountry(),
+        await clientCountry(),
       )
 
     audit({

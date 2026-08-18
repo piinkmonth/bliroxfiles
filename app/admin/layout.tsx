@@ -8,8 +8,8 @@ import { AdminTabs } from './AdminTabs'
 
 export const dynamic = 'force-dynamic'
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const user = currentUser()
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const user = await currentUser()
   if (!user) redirect('/login')
   if (!hasRole(user, 'mod')) redirect('/dashboard')
 

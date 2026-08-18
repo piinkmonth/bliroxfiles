@@ -10,7 +10,7 @@ export const fetchCache = 'force-no-store'
 export const maxDuration = 3600
 
 interface Params {
-  params: { id: string; index: string }
+  params: Promise<{ id: string; index: string }>
 }
 
 /**
@@ -21,9 +21,10 @@ interface Params {
  * instead of one enormous one. Each is independently retryable.
  */
 export const PUT = route(async (req: Request, { params }: Params) => {
-  const user = requireUser()
+  const p = await params
+  const user = await requireUser()
 
-  const session = getSession(params.id)
+  const session = getSession(p.id)
   if (!session) return fail('Upload session not found — it may have expired', 404)
   if (session.owner_id !== user.id) return fail('Upload session not found', 404)
 
@@ -34,7 +35,7 @@ export const PUT = route(async (req: Request, { params }: Params) => {
     return fail('Upload session expired', 410)
   }
 
-  const index = Number(params.index)
+  const index = Number(p.index)
   if (!Number.isInteger(index)) return fail('Chunk index must be an integer')
 
   // Reject oversized chunks on the declared length before reading the body,
@@ -58,7 +59,7 @@ export const PUT = route(async (req: Request, { params }: Params) => {
   const result = await writeChunk(session, index, req.body)
   if (!result.ok) return fail(result.error, 400)
 
-  const updated = getSession(params.id)
+  const updated = getSession(p.id)
   return ok({
     index,
     alreadyHad: result.alreadyHad,
@@ -70,8 +71,9 @@ export const PUT = route(async (req: Request, { params }: Params) => {
 
 /** Per-chunk status, so a resuming client can verify a single part. */
 export const GET = route(async (_req: Request, { params }: Params) => {
-  const user = requireUser()
-  const session = getSession(params.id)
+  const p = await params
+  const user = await requireUser()
+  const session = getSession(p.id)
   if (!session || session.owner_id !== user.id) return fail('Upload session not found', 404)
   return ok(sessionStatus(session))
 })

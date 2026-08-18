@@ -21,7 +21,7 @@ interface Body {
  * compromised, and leaving the others alive defeats the point.
  */
 export const POST = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   const body = await jsonBody<Body>(req)
   if (!body?.newPassword) return fail('A new password is required')
 
@@ -46,8 +46,9 @@ export const POST = route(async (req: Request) => {
   // Invalidate everything, then re-issue for this browser so the person doing
   // the change is not signed out of the page they are standing on.
   destroyAllSessions(user.id)
-  const token = createSession(user.id, clientIpForStorage(), userAgent())
-  cookies().set(SESSION_COOKIE, token, cookieOptions())
+  const token = await createSession(user.id, await clientIpForStorage(), await userAgent())
+  const jar = await cookies()
+  jar.set(SESSION_COOKIE, token, cookieOptions())
 
   audit({
     actorId: user.id,
@@ -55,7 +56,7 @@ export const POST = route(async (req: Request) => {
     action: hasPassword ? 'auth.password_change' : 'auth.password_set',
     targetType: 'user',
     targetId: user.id,
-    ip: clientIpForStorage(),
+    ip: await clientIpForStorage(),
     detail: { otherSessionsEnded: true },
   })
 

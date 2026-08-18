@@ -19,8 +19,8 @@ interface IncidentRow {
   uploader_name: string | null
 }
 
-export default function IncidentsPage() {
-  const user = currentUser()
+export default async function IncidentsPage() {
+  const user = await currentUser()
   if (!user || !hasRole(user, 'admin')) redirect('/admin')
 
   const incidents = db()

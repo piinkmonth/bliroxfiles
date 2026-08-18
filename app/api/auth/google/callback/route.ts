@@ -31,7 +31,7 @@ function back(path: string, error?: string): NextResponse {
 export const GET = route(
   async (req: Request) => {
     const url = new URL(req.url)
-    const jar = cookies()
+    const jar = await cookies()
 
     const returnedState = url.searchParams.get('state') ?? ''
     const cookieState = jar.get(OAUTH_STATE_COOKIE)?.value ?? ''
@@ -58,8 +58,8 @@ export const GET = route(
     if (!result.ok) return back(flow.mode === 'link' ? '/settings' : '/login', result.error)
 
     const identity = result.identity
-    const ip = clientIp()
-    const storedIp = clientIpForStorage()
+    const ip = await clientIp()
+    const storedIp = await clientIpForStorage()
 
     // --- link to the account that started the flow -------------------------
     if (flow.mode === 'link') {
@@ -196,9 +196,10 @@ export const GET = route(
   { csrf: false },
 )
 
-function signIn(user: UserRow, storedIp: string | null, ip: string | null): NextResponse {
-  const token = createSession(user.id, storedIp, userAgent())
-  cookies().set(SESSION_COOKIE, token, cookieOptions())
+async function signIn(user: UserRow, storedIp: string | null, ip: string | null): Promise<NextResponse> {
+  const token = await createSession(user.id, storedIp, await userAgent())
+  const jar = await cookies()
+  jar.set(SESSION_COOKIE, token, cookieOptions())
 
   audit({
     actorId: user.id,

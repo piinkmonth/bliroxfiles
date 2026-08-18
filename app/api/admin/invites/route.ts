@@ -16,7 +16,7 @@ interface CreateBody {
 }
 
 export const POST = route(async (req: Request) => {
-  const admin = requireRole('admin')
+  const admin = await requireRole('admin')
   const body = await jsonBody<CreateBody>(req)
   if (!body) return fail('Malformed request body')
 

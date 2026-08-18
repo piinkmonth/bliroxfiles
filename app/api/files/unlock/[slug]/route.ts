@@ -17,11 +17,12 @@ export const dynamic = 'force-dynamic'
  * anything the page links to.
  */
 export const POST = route(
-  async (req: Request, { params }: { params: { slug: string } }) => {
+  async (req: Request, { params }: { params: Promise<{ slug: string }> }) => {
+    const { slug } = await params
     const body = await jsonBody<{ password?: string }>(req)
     if (!body?.password) return fail('Enter the password')
 
-    const file = db().prepare(`SELECT * FROM files WHERE slug = ?`).get(params.slug) as
+    const file = db().prepare(`SELECT * FROM files WHERE slug = ?`).get(slug) as
       | FileRow
       | undefined
 
@@ -33,12 +34,13 @@ export const POST = route(
         action: 'file.unlock_failed',
         targetType: 'file',
         targetId: file.id,
-        ip: clientIpForStorage(),
+        ip: await clientIpForStorage(),
       })
       return fail('Wrong password', 403)
     }
 
-    cookies().set(unlockCookieName(file.id), '1', {
+    const jar = await cookies()
+    jar.set(unlockCookieName(file.id), '1', {
       httpOnly: true,
       secure: PUBLIC_ORIGIN.startsWith('https://'),
       sameSite: 'lax',

@@ -7,8 +7,9 @@ import { googleConfigured } from '@/lib/oauth'
 
 export const dynamic = 'force-dynamic'
 
-export default function LoginPage({ searchParams }: { searchParams: { error?: string } }) {
-  if (currentUser()) redirect('/dashboard')
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  if (await currentUser()) redirect('/dashboard')
+  const { error } = await searchParams
   return (
     // Mirrored against the landing page so moving between them feels like one
     // site rather than two separate templates.
@@ -16,7 +17,7 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
       <LoginForm
         logoSrc={LOGO_SRC}
         googleEnabled={googleConfigured()}
-        initialError={searchParams.error ?? null}
+        initialError={error ?? null}
       />
     </SplitLayout>
   )

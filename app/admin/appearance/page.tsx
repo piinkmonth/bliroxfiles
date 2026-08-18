@@ -5,8 +5,8 @@ import { AppearanceClient } from './AppearanceClient'
 
 export const dynamic = 'force-dynamic'
 
-export default function AppearancePage() {
-  const user = currentUser()
+export default async function AppearancePage() {
+  const user = await currentUser()
   if (!user || !hasRole(user, 'admin')) redirect('/admin')
 
   return (

@@ -14,10 +14,11 @@ export const dynamic = 'force-dynamic'
  * gating them behind a session would just break those pages. Returns 404
  * rather than a placeholder so the client can fall back to initials.
  */
-export const GET = route(async (_req: Request, { params }: { params: { id: string } }) => {
+export const GET = route(async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params
   const row = db()
     .prepare(`SELECT avatar_path, avatar_updated_at FROM users WHERE id = ?`)
-    .get(params.id) as { avatar_path: string | null; avatar_updated_at: number | null } | undefined
+    .get(id) as { avatar_path: string | null; avatar_updated_at: number | null } | undefined
 
   if (!row?.avatar_path) return new Response('Not found', { status: 404 })
 

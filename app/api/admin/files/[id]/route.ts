@@ -20,10 +20,11 @@ interface PatchBody {
  * a stranger has to decide whether to trust it. It is deliberately not
  * automatic: a clean virus scan is not the same claim.
  */
-export const PATCH = route(async (req: Request, { params }: { params: { id: string } }) => {
-  const staff = requireRole('mod')
+export const PATCH = route(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params
+  const staff = await requireRole('mod')
 
-  const file = db().prepare(`SELECT * FROM files WHERE id = ?`).get(params.id) as
+  const file = db().prepare(`SELECT * FROM files WHERE id = ?`).get(id) as
     | FileRow
     | undefined
   if (!file) return fail('File not found', 404)
@@ -58,7 +59,7 @@ export const PATCH = route(async (req: Request, { params }: { params: { id: stri
     action: body.verified ? 'file.verify' : 'file.unverify',
     targetType: 'file',
     targetId: file.id,
-    ip: clientIpForStorage(),
+    ip: await clientIpForStorage(),
     detail: { name: file.name, note: body.note },
   })
 

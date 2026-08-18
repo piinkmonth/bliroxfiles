@@ -84,7 +84,7 @@ const TOUCH_INTERVAL_MS = 60_000
  * refuses any account that is not active, so suspending a user immediately
  * kills their API access too.
  */
-export function verifyToken(raw: string): AuthedToken | null {
+export async function verifyToken(raw: string): Promise<AuthedToken | null> {
   if (!raw.startsWith('blx_')) return null
 
   const token = db()
@@ -100,17 +100,18 @@ export function verifyToken(raw: string): AuthedToken | null {
     | undefined
   if (!user || user.status !== 'active') return null
 
-  touchToken(token)
+  await touchToken(token)
 
   return { user, token, scopes: parseScopes(token.scopes) }
 }
 
-function touchToken(token: ApiTokenRow): void {
+async function touchToken(token: ApiTokenRow): Promise<void> {
   const now = Date.now()
   if (token.last_used_at && token.last_used_at > now - TOUCH_INTERVAL_MS) return
+  const ip = await clientIpForStorage()
   db()
     .prepare(`UPDATE api_tokens SET last_used_at = ?, last_used_ip = ? WHERE id = ?`)
-    .run(now, clientIpForStorage(), token.id)
+    .run(now, ip, token.id)
 }
 
 export function listTokens(userId: string): ApiTokenRow[] {

@@ -13,10 +13,6 @@ import { jsonBody } from '@/lib/api'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-interface Ctx {
-  params: { id: string }
-}
-
 /**
  * Load a plain folder the token owner owns. Encrypted folders are refused: the
  * API cannot read or operate on end-to-end encrypted content.
@@ -34,7 +30,7 @@ function loadPlain(
 }
 
 /** GET /v1/folders/:id — folder metadata. */
-export const GET = apiRoute<Ctx>(
+export const GET = apiRoute<{ id: string }>(
   async (_req, { params }, { user }) => {
     const loaded = loadPlain(params.id, user.id)
     if (!loaded.ok) return apiFail(loaded.error, loaded.status)
@@ -50,7 +46,7 @@ interface PatchBody {
 }
 
 /** PATCH /v1/folders/:id — rename and/or move. */
-export const PATCH = apiRoute<Ctx>(
+export const PATCH = apiRoute<{ id: string }>(
   async (req, { params }, { user }) => {
     const loaded = loadPlain(params.id, user.id)
     if (!loaded.ok) return apiFail(loaded.error, loaded.status)
@@ -94,7 +90,7 @@ export const PATCH = apiRoute<Ctx>(
  * Files inside are lifted to the parent, never destroyed. Pass `?recursive=1`
  * to remove a folder that still has subfolders.
  */
-export const DELETE = apiRoute<Ctx>(
+export const DELETE = apiRoute<{ id: string }>(
   async (req, { params }, { user }) => {
     const loaded = loadPlain(params.id, user.id)
     if (!loaded.ok) return apiFail(loaded.error, loaded.status)

@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 
 /** GET /api/profile/tokens — the caller's API tokens (safe view). */
 export const GET = route(async () => {
-  const user = requireUser()
+  const user = await requireUser()
   return ok({ tokens: listTokens(user.id).map(tokenView) })
 })
 
@@ -30,7 +30,7 @@ const MAX_NAME = 60
  * form we can recover, so the UI must show it now or never.
  */
 export const POST = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   const body = await jsonBody<CreateBody>(req)
   if (!body) return fail('Malformed request body')
 

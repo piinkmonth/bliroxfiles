@@ -51,7 +51,7 @@ export function route<Args extends unknown[]>(
       const req = args[0] as Request | undefined
 
       if (req && options.csrf !== false && isMutating(req.method)) {
-        const csrf = checkOrigin()
+        const csrf = await checkOrigin()
         if (!csrf.ok) {
           console.warn('[csrf] rejected', req.method, req.url, csrf.reason)
           return fail('Request blocked: bad origin', 403)
@@ -59,7 +59,7 @@ export function route<Args extends unknown[]>(
       }
 
       if (options.limit && req) {
-        const ip = clientIp() ?? 'unknown'
+        const ip = (await clientIp()) ?? 'unknown'
         const extra = options.limitKey ? await options.limitKey(req) : ''
         const result = consume(options.limit, extra ? `${ip}:${extra}` : ip)
         if (!result.allowed) {

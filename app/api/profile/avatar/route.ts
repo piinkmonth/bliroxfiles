@@ -55,7 +55,7 @@ function sniffFormat(buf: Buffer): string | null {
  * discards anything polyglot hiding in the original container.
  */
 export const POST = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
 
   const declared = Number(req.headers.get('content-length') ?? '0')
   if (declared > MAX_UPLOAD_BYTES) {
@@ -156,7 +156,7 @@ export const POST = route(async (req: Request) => {
 }, { limit: 'avatar' })
 
 export const DELETE = route(async () => {
-  const user = requireUser()
+  const user = await requireUser()
 
   if (user.avatar_path) {
     await fsp.rm(path.join(PATHS.avatars, user.avatar_path), { force: true }).catch(() => {})

@@ -18,7 +18,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 interface Params {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 function loadOwned(id: string, userId: string, isStaff: boolean): FileRow | null {
@@ -36,8 +36,9 @@ function loadOwned(id: string, userId: string, isStaff: boolean): FileRow | null
  * after being reported can still be tied back to its uploader.
  */
 export const DELETE = route(async (_req: Request, { params }: Params) => {
-  const user = requireUser()
-  const file = loadOwned(params.id, user.id, hasRole(user, 'mod'))
+  const { id } = await params
+  const user = await requireUser()
+  const file = loadOwned(id, user.id, hasRole(user, 'mod'))
   if (!file) return fail('File not found', 404)
 
   if (file.status === 'quarantined') {
@@ -87,8 +88,9 @@ interface PatchBody {
 }
 
 export const PATCH = route(async (req: Request, { params }: Params) => {
-  const user = requireUser()
-  const file = loadOwned(params.id, user.id, hasRole(user, 'mod'))
+  const { id } = await params
+  const user = await requireUser()
+  const file = loadOwned(id, user.id, hasRole(user, 'mod'))
   if (!file) return fail('File not found', 404)
 
   const body = await jsonBody<PatchBody>(req)

@@ -71,7 +71,7 @@ export const POST = route(
           action: 'auth.2fa_failed',
           targetType: 'user',
           targetId: user.id,
-          ip: clientIpForStorage(),
+          ip: await clientIpForStorage(),
         })
         return fail('That code is not right', 403)
       }
@@ -82,9 +82,10 @@ export const POST = route(
         .run(JSON.stringify(remaining), user.id)
     }
 
-    const storedIp = clientIpForStorage()
-    const token = createSession(user.id, storedIp, userAgent())
-    cookies().set(SESSION_COOKIE, token, cookieOptions())
+    const storedIp = await clientIpForStorage()
+    const token = await createSession(user.id, storedIp, await userAgent())
+    const jar = await cookies()
+    jar.set(SESSION_COOKIE, token, cookieOptions())
 
     audit({
       actorId: user.id,

@@ -45,6 +45,24 @@ function clockTime(seconds: number): string {
 
 const SPEEDS = [0.5, 1, 1.25, 1.5, 2]
 
+/*
+ * Fullscreen, unprefixed, is in every browser this app supports except Safari,
+ * which still ships only `webkit*` — and on iPhone ships no element fullscreen
+ * at all, only `webkitEnterFullscreen` on the video itself. None of the three
+ * are in the DOM lib types, hence the casts.
+ */
+type FsDocument = Document & {
+  webkitFullscreenElement?: Element | null
+  webkitExitFullscreen?: () => Promise<void> | void
+}
+type FsElement = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void }
+type IosVideo = HTMLVideoElement & { webkitEnterFullscreen?: () => void }
+
+function fullscreenElement(): Element | null {
+  const d = document as FsDocument
+  return d.fullscreenElement ?? d.webkitFullscreenElement ?? null
+}
+
 export function MediaPlayer({
   src,
   kind,
@@ -184,9 +202,19 @@ export function MediaPlayer({
 
   useEffect(() => {
     setPipSupported(!!document.pictureInPictureEnabled)
-    const onChange = () => setFullscreen(document.fullscreenElement === wrapRef.current)
+    const onChange = () => {
+      const inside = fullscreenElement() === wrapRef.current
+      setFullscreen(inside)
+      // Escape leaves fullscreen without moving the pointer, so the idle timer
+      // would otherwise drop us back inline with the controls still hidden.
+      if (!inside) setIdle(false)
+    }
     document.addEventListener('fullscreenchange', onChange)
-    return () => document.removeEventListener('fullscreenchange', onChange)
+    document.addEventListener('webkitfullscreenchange', onChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange)
+      document.removeEventListener('webkitfullscreenchange', onChange)
+    }
   }, [])
 
   // --- keyboard -------------------------------------------------------------
@@ -257,10 +285,23 @@ export function MediaPlayer({
   }
 
   async function toggleFullscreen() {
-    if (!wrapRef.current) return
+    const wrap = wrapRef.current as FsElement | null
+    if (!wrap) return
+    const d = document as FsDocument
     try {
-      if (document.fullscreenElement) await document.exitFullscreen()
-      else await wrapRef.current.requestFullscreen()
+      if (fullscreenElement()) {
+        if (d.exitFullscreen) await d.exitFullscreen()
+        else d.webkitExitFullscreen?.()
+        return
+      }
+      if (wrap.requestFullscreen) await wrap.requestFullscreen()
+      else if (wrap.webkitRequestFullscreen) await wrap.webkitRequestFullscreen()
+      // iPhone: no element fullscreen, so hand the video to the native player.
+      else (mediaRef.current as IosVideo | null)?.webkitEnterFullscreen?.()
+      // The shortcuts are bound to the wrapper, and some browsers move focus to
+      // the fullscreen root's document instead — without this, F and space stop
+      // responding the moment the screen fills.
+      wrap.focus()
     } catch {
       // Refused (iOS Safari on non-video elements, permissions policy) — the
       // player keeps working inline, so there is nothing to report.
@@ -322,6 +363,21 @@ export function MediaPlayer({
   const progress = duration > 0 ? current / duration : 0
   const bufferedFraction = duration > 0 ? Math.min(1, buffered / duration) : 0
   const controlsHidden = isVideo && idle && playing
+  /*
+   * Fullscreen is a different layout, not the inline one stretched.
+   *
+   * The inline player is a fixed-width card: the video caps at 70vh and the
+   * wrapper hugs it. Fullscreen makes the wrapper the size of the screen, so
+   * that cap becomes a video pinned to the top of the display with a black band
+   * under it, inside a hairline border tracing the bezel. So fullscreen drops
+   * the border, centres its contents, and lets the video take the whole area at
+   * its own aspect ratio.
+   *
+   * The controls scale with it. 11px text and 15px icons are right at 512px
+   * wide and unreadable across 1080p, and every native player grows them here.
+   */
+  const inFs = fullscreen && isVideo
+  const ic = inFs ? 19 : 15
 
   return (
     <div
@@ -330,8 +386,10 @@ export function MediaPlayer({
       onKeyDown={onKeyDown}
       onPointerMove={nudgeIdle}
       onPointerLeave={() => isVideo && playing && setIdle(true)}
-      className={`group relative select-none overflow-hidden border border-border bg-black outline-none focus-visible:border-accent ${
-        isVideo ? '' : 'bg-raised/40'
+      className={`group relative select-none overflow-hidden outline-none ${
+        inFs
+          ? 'flex h-full w-full items-center justify-center bg-black'
+          : `border border-border focus-visible:border-accent ${isVideo ? 'bg-black' : 'bg-raised/40'}`
       } ${controlsHidden ? 'cursor-none' : ''}`}
       aria-label={title ? `${kind} player: ${title}` : `${kind} player`}
     >
@@ -345,7 +403,9 @@ export function MediaPlayer({
           playsInline
           onClick={toggle}
           onDoubleClick={toggleFullscreen}
-          className="block max-h-[70vh] w-full cursor-pointer bg-black"
+          className={`block w-full cursor-pointer bg-black ${
+            inFs ? 'h-full max-h-none object-contain' : 'max-h-[70vh]'
+          }`}
         />
       ) : (
         // eslint-disable-next-line jsx-a11y/media-has-caption
@@ -360,13 +420,17 @@ export function MediaPlayer({
           className="absolute inset-0 flex items-center justify-center bg-black/25 transition-colors hover:bg-black/35"
           aria-label={ended ? 'Replay' : playing ? 'Pause' : 'Play'}
         >
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur">
+          <span
+            className={`flex items-center justify-center rounded-full bg-black/70 text-white backdrop-blur ${
+              inFs ? 'h-20 w-20' : 'h-14 w-14'
+            }`}
+          >
             {waiting ? (
-              <Loader2 size={22} className="animate-spin" />
+              <Loader2 size={inFs ? 30 : 22} className="animate-spin" />
             ) : ended ? (
-              <RotateCcw size={22} />
+              <RotateCcw size={inFs ? 30 : 22} />
             ) : (
-              <Play size={22} className="ml-0.5" fill="currentColor" />
+              <Play size={inFs ? 30 : 22} className="ml-0.5" fill="currentColor" />
             )}
           </span>
         </button>
@@ -376,9 +440,11 @@ export function MediaPlayer({
       <div
         className={`${
           isVideo
-            ? 'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent pt-8 text-white'
+            ? `absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/55 to-transparent text-white ${
+                inFs ? 'pt-16' : 'pt-8'
+              }`
             : 'relative text-text'
-        } px-2.5 pb-2 transition-opacity duration-200 ${
+        } ${inFs ? 'px-5 pb-4' : 'px-2.5 pb-2'} transition-opacity duration-200 ${
           controlsHidden ? 'pointer-events-none opacity-0' : 'opacity-100'
         }`}
       >
@@ -394,27 +460,33 @@ export function MediaPlayer({
           aria-valuetext={`${clockTime(current)} of ${clockTime(duration)}`}
           onPointerDown={onScrubPointerDown}
           onPointerMove={onScrubPointerMove}
-          className="group/scrub relative flex h-4 cursor-pointer items-center"
+          className={`group/scrub relative flex cursor-pointer items-center ${
+            inFs ? 'h-6' : 'h-4'
+          }`}
         >
-          <div className={`h-1 w-full ${isVideo ? 'bg-white/25' : 'bg-border'}`}>
+          <div
+            className={`w-full ${inFs ? 'h-1.5' : 'h-1'} ${isVideo ? 'bg-white/25' : 'bg-border'}`}
+          >
             <div
               className={`h-full ${isVideo ? 'bg-white/30' : 'bg-muted/40'}`}
               style={{ width: `${bufferedFraction * 100}%` }}
             />
           </div>
           <div
-            className="absolute left-0 h-1 bg-[rgb(var(--c-accent))]"
+            className={`absolute left-0 bg-[rgb(var(--c-accent))] ${inFs ? 'h-1.5' : 'h-1'}`}
             style={{ width: `${progress * 100}%` }}
           />
           <div
-            className="absolute h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-[rgb(var(--c-accent))] opacity-0 transition-opacity group-hover/scrub:opacity-100"
+            className={`absolute -translate-x-1/2 rounded-full bg-[rgb(var(--c-accent))] opacity-0 transition-opacity group-hover/scrub:opacity-100 ${
+              inFs ? 'h-4 w-4' : 'h-2.5 w-2.5'
+            }`}
             style={{ left: `${progress * 100}%` }}
           />
         </div>
 
-        <div className="flex items-center gap-1 pt-1">
-          <IconButton onClick={toggle} label={playing ? 'Pause' : 'Play'}>
-            {playing ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" />}
+        <div className={`flex items-center pt-1 ${inFs ? 'gap-2' : 'gap-1'}`}>
+          <IconButton onClick={toggle} label={playing ? 'Pause' : 'Play'} big={inFs}>
+            {playing ? <Pause size={ic} fill="currentColor" /> : <Play size={ic} fill="currentColor" />}
           </IconButton>
 
           {/* Volume: the slider expands on hover so the bar stays compact. */}
@@ -422,8 +494,9 @@ export function MediaPlayer({
             <IconButton
               onClick={() => mediaRef.current && (mediaRef.current.muted = !muted)}
               label={muted ? 'Unmute' : 'Mute'}
+              big={inFs}
             >
-              {muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+              {muted || volume === 0 ? <VolumeX size={ic} /> : <Volume2 size={ic} />}
             </IconButton>
             <input
               type="range"
@@ -433,30 +506,38 @@ export function MediaPlayer({
               value={muted ? 0 : volume}
               onChange={(e) => changeVolume(Number(e.target.value))}
               aria-label="Volume"
-              className="h-1 w-0 cursor-pointer accent-[rgb(var(--c-accent))] opacity-0 transition-all duration-200 group-hover/vol:w-16 group-hover/vol:opacity-100 focus:w-16 focus:opacity-100"
+              className={`h-1 w-0 cursor-pointer accent-[rgb(var(--c-accent))] opacity-0 transition-all duration-200 ${
+                inFs
+                  ? 'focus:w-24 focus:opacity-100 group-hover/vol:w-24 group-hover/vol:opacity-100'
+                  : 'focus:w-16 focus:opacity-100 group-hover/vol:w-16 group-hover/vol:opacity-100'
+              }`}
             />
           </div>
 
-          <span className="ml-1 font-mono text-[11px] tabular-nums opacity-80">
+          <span
+            className={`ml-1 font-mono tabular-nums opacity-80 ${inFs ? 'text-[13px]' : 'text-[11px]'}`}
+          >
             {clockTime(current)}
             <span className="opacity-50"> / {clockTime(duration)}</span>
           </span>
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className={`ml-auto flex items-center ${inFs ? 'gap-2' : 'gap-1'}`}>
             <button
               onClick={() => {
                 const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]
                 if (mediaRef.current) mediaRef.current.playbackRate = next
               }}
-              className="rounded px-1.5 py-1 font-mono text-[11px] tabular-nums opacity-80 transition-opacity hover:opacity-100"
+              className={`rounded font-mono tabular-nums opacity-80 transition-opacity hover:opacity-100 ${
+                inFs ? 'px-2 py-1.5 text-[13px]' : 'px-1.5 py-1 text-[11px]'
+              }`}
               aria-label={`Playback speed, currently ${speed}x`}
             >
               {speed}×
             </button>
 
             {isVideo && pipSupported && (
-              <IconButton onClick={togglePip} label="Picture in picture">
-                <PictureInPicture2 size={15} />
+              <IconButton onClick={togglePip} label="Picture in picture" big={inFs}>
+                <PictureInPicture2 size={ic} />
               </IconButton>
             )}
 
@@ -464,8 +545,9 @@ export function MediaPlayer({
               <IconButton
                 onClick={toggleFullscreen}
                 label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                big={inFs}
               >
-                {fullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+                {fullscreen ? <Minimize size={ic} /> : <Maximize size={ic} />}
               </IconButton>
             )}
           </div>
@@ -479,17 +561,19 @@ function IconButton({
   children,
   onClick,
   label,
+  big,
 }: {
   children: React.ReactNode
   onClick: () => void
   label: string
+  big?: boolean
 }) {
   return (
     <button
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="rounded p-1.5 opacity-80 transition-opacity hover:opacity-100"
+      className={`rounded opacity-80 transition-opacity hover:opacity-100 ${big ? 'p-2' : 'p-1.5'}`}
     >
       {children}
     </button>

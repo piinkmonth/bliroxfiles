@@ -19,10 +19,6 @@ import { jsonBody } from '@/lib/api'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-interface Ctx {
-  params: { id: string }
-}
-
 /** Load a file the token owner owns. API access is owner-only — no staff path. */
 function loadOwned(id: string, user: UserRow): FileRow | null {
   const file = db().prepare(`SELECT * FROM files WHERE id = ?`).get(id) as FileRow | undefined
@@ -31,7 +27,7 @@ function loadOwned(id: string, user: UserRow): FileRow | null {
 }
 
 /** GET /v1/files/:id — metadata, share URL, and download stats. */
-export const GET = apiRoute<Ctx>(
+export const GET = apiRoute<{ id: string }>(
   async (_req, { params }, { user }) => {
     const file = loadOwned(params.id, user)
     if (!file) return apiFail('File not found', 404)
@@ -59,7 +55,7 @@ interface PatchBody {
  * exposed here; the encrypted rules below refuse the operations that would
  * conflict, matching the web route.
  */
-export const PATCH = apiRoute<Ctx>(
+export const PATCH = apiRoute<{ id: string }>(
   async (req, { params }, { user }) => {
     const file = loadOwned(params.id, user)
     if (!file) return apiFail('File not found', 404)
@@ -203,7 +199,7 @@ export const PATCH = apiRoute<Ctx>(
  * The blob is removed and the row soft-deleted, exactly as the web route does,
  * so the hash and audit trail survive a delete.
  */
-export const DELETE = apiRoute<Ctx>(
+export const DELETE = apiRoute<{ id: string }>(
   async (_req, { params }, { user }) => {
     const file = loadOwned(params.id, user)
     if (!file) return apiFail('File not found', 404)

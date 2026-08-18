@@ -20,15 +20,16 @@ export const dynamic = 'force-dynamic'
  * counter, because a thumbnail appearing in a Discord embed is not somebody
  * fetching the file.
  */
-export const GET = route(async (_req: Request, { params }: { params: { slug: string } }) => {
-  const file = db().prepare(`SELECT * FROM files WHERE slug = ?`).get(params.slug) as
+export const GET = route(async (_req: Request, { params }: { params: Promise<{ slug: string }> }) => {
+  const { slug } = await params
+  const file = db().prepare(`SELECT * FROM files WHERE slug = ?`).get(slug) as
     | FileRow
     | undefined
 
   if (!file || file.deleted_at || file.status !== 'active') return notFound()
   if (file.expires_at && file.expires_at < Date.now()) return notFound()
 
-  const viewer = currentUser()
+  const viewer = await currentUser()
   const isOwner = !!viewer && viewer.id === file.owner_id
 
   /*

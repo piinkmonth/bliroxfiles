@@ -30,7 +30,7 @@ const MAX_FILES = 200
  * ended up in the archive would be undecryptable noise.
  */
 export const POST = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
 
   /*
    * Accepts both JSON and a form post. The dashboard submits a real <form> so
@@ -106,7 +106,7 @@ export const POST = route(async (req: Request) => {
     actorId: user.id,
     actorName: user.username,
     action: 'file.zip',
-    ip: clientIpForStorage(),
+    ip: await clientIpForStorage(),
     detail: { count: entries.length, bytes: total },
   })
 

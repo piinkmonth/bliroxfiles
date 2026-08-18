@@ -63,7 +63,7 @@ export const POST = route(
       throw err
     }
 
-    const storedIp = clientIpForStorage()
+    const storedIp = await clientIpForStorage()
 
     /* ---- second step: two-factor -------------------------------------- */
     if (body.challenge) {

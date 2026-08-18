@@ -3,6 +3,17 @@
 .env
 .env.*
 !.env.example
+DUAL-REPO.md
+.notes-style.md
+SETUP.md
+push-both.sh
+sync-oss.sh
+readme.md
+oss-excludes.txt
+cloudflared-config.yml
+nginx-blirox-files.conf
+sysctl-99-blirox.conf
+VPS-SETUP.md
 
 # Local storage root used when no drive is mounted (development only).
 .devdata/

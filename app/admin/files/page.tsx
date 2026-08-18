@@ -22,13 +22,14 @@ interface Row {
   verifier_name: string | null
 }
 
-export default function AdminFilesPage({
+export default async function AdminFilesPage({
   searchParams,
 }: {
-  searchParams: { view?: string; q?: string }
+  searchParams: Promise<{ view?: string; q?: string }>
 }) {
-  const view = searchParams.view === 'quarantined' ? 'quarantined' : 'active'
-  const q = (searchParams.q ?? '').trim()
+  const sp = await searchParams
+  const view = sp.view === 'quarantined' ? 'quarantined' : 'active'
+  const q = (sp.q ?? '').trim()
 
   const rows = db()
     .prepare(

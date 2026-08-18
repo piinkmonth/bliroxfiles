@@ -9,10 +9,6 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 3600
 
-interface Ctx {
-  params: { id: string }
-}
-
 /**
  * POST /v1/uploads/:id/complete — assemble, screen, and publish a session.
  *
@@ -22,7 +18,7 @@ interface Ctx {
  * options the one-shot upload accepts (visibility, note, expiresIn/expiresAt,
  * burnAfter, anonymous); with no body the file takes the defaults.
  */
-export const POST = apiRoute<Ctx>(
+export const POST = apiRoute<{ id: string }>(
   async (req, { params }, { user }) => {
     const session = getSession(params.id)
     if (!session) return apiFail('Upload session not found — it may have expired', 404)

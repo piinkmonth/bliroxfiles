@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 interface Params {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 /** Owner-only: seeing who else has a folder is itself owner information. */
@@ -25,10 +25,11 @@ function requireOwnedFolder(folderId: string, userId: string) {
 }
 
 export const GET = route(async (_req: Request, { params }: Params) => {
-  const user = requireUser()
+  const { id } = await params
+  const user = await requireUser()
   try {
-    requireOwnedFolder(params.id, user.id)
-    return ok({ collaborators: listCollaborators(params.id) })
+    requireOwnedFolder(id, user.id)
+    return ok({ collaborators: listCollaborators(id) })
   } catch (err) {
     if (err instanceof CollabError) return fail(err.message, err.status)
     throw err
@@ -41,7 +42,8 @@ interface PostBody {
 }
 
 export const POST = route(async (req: Request, { params }: Params) => {
-  const user = requireUser()
+  const { id } = await params
+  const user = await requireUser()
   const body = await jsonBody<PostBody>(req)
 
   const username = (body?.username ?? '').trim()
@@ -51,7 +53,7 @@ export const POST = route(async (req: Request, { params }: Params) => {
 
   try {
     const collaborator = addCollaborator({
-      folderId: params.id,
+      folderId: id,
       ownerId: user.id,
       ownerName: user.username,
       username,
@@ -65,13 +67,14 @@ export const POST = route(async (req: Request, { params }: Params) => {
 }, { limit: 'mutation' })
 
 export const DELETE = route(async (req: Request, { params }: Params) => {
-  const user = requireUser()
+  const { id } = await params
+  const user = await requireUser()
   const userId = new URL(req.url).searchParams.get('userId')
   if (!userId) return fail('userId is required')
 
   try {
     removeCollaborator({
-      folderId: params.id,
+      folderId: id,
       ownerId: user.id,
       ownerName: user.username,
       userId,

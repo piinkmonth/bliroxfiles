@@ -71,9 +71,10 @@ function loadGallery(token: string): Gallery | null {
 export async function generateMetadata({
   params,
 }: {
-  params: { token: string }
+  params: Promise<{ token: string }>
 }): Promise<Metadata> {
-  const gallery = loadGallery(params.token)
+  const { token } = await params
+  const gallery = loadGallery(token)
 
   if (!gallery) {
     return {
@@ -98,7 +99,7 @@ export async function generateMetadata({
       siteName: SITE_NAME,
       title: gallery.folder.name,
       description,
-      url: `${PUBLIC_ORIGIN}/g/${params.token}`,
+      url: `${PUBLIC_ORIGIN}/g/${token}`,
       type: 'website',
       images: cover ? [{ url: `${PUBLIC_ORIGIN}/api/thumb/${cover.slug}` }] : undefined,
     },
@@ -108,8 +109,9 @@ export async function generateMetadata({
   }
 }
 
-export default function GalleryPage({ params }: { params: { token: string } }) {
-  const gallery = loadGallery(params.token)
+export default async function GalleryPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params
+  const gallery = loadGallery(token)
   if (!gallery) notFound()
 
   return (

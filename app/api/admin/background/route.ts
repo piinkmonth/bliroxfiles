@@ -96,7 +96,7 @@ function storedName(original: string): string {
 }
 
 export const GET = route(async () => {
-  requireRole('admin')
+  await requireRole('admin')
   // force: an admin opening this page wants the current contents of both
   // directories, not whatever was cached up to 30 seconds ago.
   return ok({ backgrounds: listBackgrounds(true), current: getBackgroundMode() })
@@ -118,7 +118,7 @@ export const GET = route(async () => {
  * why a file written to `public/` at runtime is listed but never served.
  */
 export const POST = route(async (req: Request) => {
-  const admin = requireRole('admin')
+  const admin = await requireRole('admin')
 
   const declared = Number(req.headers.get('content-length') ?? '0')
   if (declared > MAX_UPLOAD_BYTES) {
@@ -228,7 +228,7 @@ export const POST = route(async (req: Request) => {
  * stick.
  */
 export const DELETE = route(async (req: Request) => {
-  const admin = requireRole('admin')
+  const admin = await requireRole('admin')
   const name = new URL(req.url).searchParams.get('name')
   if (!name) return fail('Which background?')
 
@@ -276,7 +276,7 @@ interface Body {
 }
 
 export const PUT = route(async (req: Request) => {
-  const admin = requireRole('admin')
+  const admin = await requireRole('admin')
   const body = await jsonBody<Body>(req)
   if (!body?.mode) return fail('Pick a mode')
 

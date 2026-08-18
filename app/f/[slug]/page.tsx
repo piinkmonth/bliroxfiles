@@ -53,9 +53,10 @@ const SITE_NAME = 'Blirox'
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }): Promise<Metadata> {
-  const file = loadFile(params.slug)
+  const { slug } = await params
+  const file = loadFile(slug)
 
   const generic: Metadata = {
     title: `File from ${SITE_NAME}`,
@@ -197,8 +198,9 @@ function Notice({ title, body }: { title: string; body: string }) {
   )
 }
 
-export default function FilePage({ params }: { params: { slug: string } }) {
-  const file = loadFile(params.slug)
+export default async function FilePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const file = loadFile(slug)
 
   if (!file) notFound()
 
@@ -228,7 +230,7 @@ export default function FilePage({ params }: { params: { slug: string } }) {
     return <Notice title="This link has expired" body="Ask whoever shared it for a new one." />
   }
 
-  const viewer = currentUser()
+  const viewer = await currentUser()
   const access = viewer ? fileAccess(file, viewer.id) : null
 
   if (file.visibility === 'private' && !access) notFound()

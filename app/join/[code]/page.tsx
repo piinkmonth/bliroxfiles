@@ -10,10 +10,11 @@ import { googleConfigured } from '@/lib/oauth'
 
 export const dynamic = 'force-dynamic'
 
-export default function JoinPage({ params }: { params: { code: string } }) {
-  if (currentUser()) redirect('/dashboard')
+export default async function JoinPage({ params }: { params: Promise<{ code: string }> }) {
+  if (await currentUser()) redirect('/dashboard')
 
-  const check = checkInvite(params.code)
+  const { code } = await params
+  const check = checkInvite(code)
 
   if (!check.valid) {
     return (
@@ -32,7 +33,7 @@ export default function JoinPage({ params }: { params: { code: string } }) {
   return (
     <SplitLayout>
       <JoinForm
-        code={params.code}
+        code={code}
         quotaLabel={formatBytes(check.invite.quota_bytes)}
         logoSrc={LOGO_SRC}
         googleEnabled={googleConfigured()}

@@ -8,17 +8,13 @@ import { audit } from '@/lib/audit'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-interface Ctx {
-  params: { id: string }
-}
-
 /**
  * GET /v1/uploads/:id — session status.
  *
  * The `missing` array is what makes resume work: a client that dropped
  * mid-upload reads it and re-sends only those chunk indices.
  */
-export const GET = apiRoute<Ctx>(
+export const GET = apiRoute<{ id: string }>(
   async (_req, { params }, { user }) => {
     const session = getSession(params.id)
     if (!session || session.owner_id !== user.id) {
@@ -30,7 +26,7 @@ export const GET = apiRoute<Ctx>(
 )
 
 /** DELETE /v1/uploads/:id — abandon an upload and free the staged bytes now. */
-export const DELETE = apiRoute<Ctx>(
+export const DELETE = apiRoute<{ id: string }>(
   async (_req, { params }, { user }) => {
     const session = getSession(params.id)
     if (!session || session.owner_id !== user.id) {

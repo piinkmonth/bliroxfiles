@@ -21,15 +21,16 @@ export const dynamic = 'force-dynamic'
 
 type FolderWithCounts = FolderRow & { file_count: number; total_bytes: number }
 
-export default function DashboardPage({
+export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { folder?: string }
+  searchParams: Promise<{ folder?: string }>
 }) {
-  const user = currentUser()
+  const user = await currentUser()
   if (!user) redirect('/login')
 
-  const folderId = searchParams.folder || null
+  const sp = await searchParams
+  const folderId = sp.folder || null
 
   /*
    * Two ways to be looking at a folder: you own it, or it was shared with you.

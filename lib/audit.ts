@@ -25,9 +25,9 @@ export interface AuditEntry {
  * write an audit entry from — a maintenance sweep, say. Failing to resolve the
  * origin must not cost the entry, so it degrades to nulls.
  */
-function requestOrigin(): { ip: string | null; country: string | null } {
+async function requestOrigin(): Promise<{ ip: string | null; country: string | null }> {
   try {
-    const h = headers()
+    const h = await headers()
     const ip =
       h.get('cf-connecting-ip') ?? h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null
     const code = h.get('cf-ipcountry')
@@ -49,10 +49,10 @@ function requestOrigin(): { ip: string | null; country: string | null } {
  * lib/crypto.ts on § 2258A). Callers that already hold an encrypted value pass
  * it; everyone else lets this capture and encrypt the request's own.
  */
-export function audit(entry: AuditEntry): void {
+export async function audit(entry: AuditEntry): Promise<void> {
   try {
     const needsCapture = entry.ip === undefined || entry.country === undefined
-    const captured = needsCapture ? requestOrigin() : { ip: null, country: null }
+    const captured = needsCapture ? await requestOrigin() : { ip: null, country: null }
 
     db()
       .prepare(

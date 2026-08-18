@@ -9,9 +9,9 @@ import { formatBytes } from '@/lib/format'
 
 export const dynamic = 'force-dynamic'
 
-export default function Landing() {
+export default async function Landing() {
   // Signed-in visitors have no use for the pitch.
-  if (currentUser()) redirect('/dashboard')
+  if (await currentUser()) redirect('/dashboard')
 
   const specs: [string, string][] = [
     ['max file', formatBytes(LIMITS.maxFileBytes)],

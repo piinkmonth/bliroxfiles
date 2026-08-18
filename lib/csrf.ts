@@ -63,8 +63,8 @@ export interface CsrfResult {
   reason?: string
 }
 
-export function checkOrigin(): CsrfResult {
-  const h = headers()
+export async function checkOrigin(): Promise<CsrfResult> {
+  const h = await headers()
   const origin = h.get('origin')
   const referer = h.get('referer')
   const allowed = allowedHosts()

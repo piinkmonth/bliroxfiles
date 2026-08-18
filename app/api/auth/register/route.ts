@@ -67,9 +67,9 @@ export const POST = route(async (req: Request) => {
 
   const id = newId()
   const now = Date.now()
-  const ip = clientIp()
+  const ip = await clientIp()
   // Stored encrypted; see lib/crypto.ts for why this is not a hash.
-  const storedIp = clientIpForStorage()
+  const storedIp = await clientIpForStorage()
 
   try {
     db()
@@ -96,8 +96,9 @@ export const POST = route(async (req: Request) => {
     throw err
   }
 
-  const token = createSession(id, storedIp, userAgent())
-  cookies().set(SESSION_COOKIE, token, cookieOptions())
+  const token = await createSession(id, storedIp, await userAgent())
+  const jar = await cookies()
+  jar.set(SESSION_COOKIE, token, cookieOptions())
 
   audit({
     actorId: id,

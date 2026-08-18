@@ -277,7 +277,7 @@ export const POST = apiRoute(
       sizeBytes: written.bytes,
       folderId,
       encMeta: null,
-      country: clientCountry(),
+      country: await clientCountry(),
       visibility: options.opts.visibility,
       note: options.opts.note,
       expiresAt: options.opts.expiresAt,

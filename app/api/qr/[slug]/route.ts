@@ -19,11 +19,12 @@ export const dynamic = 'force-dynamic'
  * wherever a caller likes — which is the thing that would make a QR endpoint
  * on a trusted domain worth abusing.
  */
-export const GET = route(async (_req: Request, { params }: { params: { slug: string } }) => {
+export const GET = route(async (_req: Request, { params }: { params: Promise<{ slug: string }> }) => {
+  const { slug } = await params
   const file = db()
     .prepare(`SELECT slug, visibility, encrypted, enc_share, status, deleted_at, expires_at
               FROM files WHERE slug = ?`)
-    .get(params.slug) as Pick<
+    .get(slug) as Pick<
     FileRow,
     'slug' | 'visibility' | 'encrypted' | 'enc_share' | 'status' | 'deleted_at' | 'expires_at'
   > | undefined

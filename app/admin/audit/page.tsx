@@ -15,15 +15,16 @@ const TONE: Record<string, string> = {
   'user.register': 'text-success',
 }
 
-export default function AuditPage({
+export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: { page?: string }
+  searchParams: Promise<{ page?: string }>
 }) {
-  const user = currentUser()
+  const user = await currentUser()
   if (!user || !hasRole(user, 'admin')) redirect('/admin')
 
-  const page = Math.max(0, Number(searchParams.page ?? 0) || 0)
+  const sp = await searchParams
+  const page = Math.max(0, Number(sp.page ?? 0) || 0)
   const pageSize = 100
   const entries = recentAudit(pageSize, page * pageSize)
 

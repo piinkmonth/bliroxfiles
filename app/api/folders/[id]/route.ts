@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 interface Params {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 interface PatchBody {
@@ -17,24 +17,25 @@ interface PatchBody {
 }
 
 export const PATCH = route(async (req: Request, { params }: Params) => {
-  const user = requireUser()
+  const { id } = await params
+  const user = await requireUser()
   const body = await jsonBody<PatchBody>(req)
   if (!body) return fail('Malformed request body')
 
   try {
-    if (body.name !== undefined) renameFolder(params.id, user.id, body.name)
-    if ('parentId' in body) moveFolder(params.id, user.id, body.parentId ?? null)
+    if (body.name !== undefined) renameFolder(id, user.id, body.name)
+    if ('parentId' in body) moveFolder(id, user.id, body.parentId ?? null)
 
     audit({
       actorId: user.id,
       actorName: user.username,
       action: 'folder.update',
       targetType: 'folder',
-      targetId: params.id,
+      targetId: id,
       detail: body,
     })
 
-    return ok({ folder: getFolder(params.id, user.id) })
+    return ok({ folder: getFolder(id, user.id) })
   } catch (err) {
     if (err instanceof FolderError) return fail(err.message, err.status)
     throw err
@@ -42,18 +43,19 @@ export const PATCH = route(async (req: Request, { params }: Params) => {
 })
 
 export const DELETE = route(async (req: Request, { params }: Params) => {
-  const user = requireUser()
+  const { id } = await params
+  const user = await requireUser()
   const recursive = new URL(req.url).searchParams.get('recursive') === '1'
 
   try {
-    deleteFolder(params.id, user.id, recursive)
+    deleteFolder(id, user.id, recursive)
 
     audit({
       actorId: user.id,
       actorName: user.username,
       action: 'folder.delete',
       targetType: 'folder',
-      targetId: params.id,
+      targetId: id,
       detail: { recursive },
     })
 

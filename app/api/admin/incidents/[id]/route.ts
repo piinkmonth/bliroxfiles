@@ -21,10 +21,11 @@ interface PatchBody {
  * content was found. The clock is reset here so the automatic purge cannot
  * remove evidence early.
  */
-export const PATCH = route(async (req: Request, { params }: { params: { id: string } }) => {
-  const admin = requireRole('admin')
+export const PATCH = route(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params
+  const admin = await requireRole('admin')
 
-  const incident = db().prepare(`SELECT * FROM incidents WHERE id = ?`).get(params.id) as
+  const incident = db().prepare(`SELECT * FROM incidents WHERE id = ?`).get(id) as
     | { id: string; ncmec_status: string; category: string }
     | undefined
   if (!incident) return fail('Incident not found', 404)

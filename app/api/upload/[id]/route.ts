@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 interface Params {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 /**
@@ -18,16 +18,18 @@ interface Params {
  * client that dropped mid-upload asks here and re-sends only those indices.
  */
 export const GET = route(async (_req: Request, { params }: Params) => {
-  const user = requireUser()
-  const session = getSession(params.id)
+  const { id } = await params
+  const user = await requireUser()
+  const session = getSession(id)
   if (!session || session.owner_id !== user.id) return fail('Upload session not found', 404)
   return ok(sessionStatus(session))
 })
 
 /** Abandon an upload and free the staged bytes immediately. */
 export const DELETE = route(async (_req: Request, { params }: Params) => {
-  const user = requireUser()
-  const session = getSession(params.id)
+  const { id } = await params
+  const user = await requireUser()
+  const session = getSession(id)
   if (!session || session.owner_id !== user.id) return fail('Upload session not found', 404)
 
   await fsp.rm(stagingDir(session.id), { recursive: true, force: true })

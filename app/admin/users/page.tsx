@@ -22,8 +22,8 @@ interface UserJoin {
   account_verified_at: number | null
 }
 
-export default function UsersPage() {
-  const me = currentUser()
+export default async function UsersPage() {
+  const me = await currentUser()
   if (!me || !hasRole(me, 'admin')) redirect('/admin')
 
   const users = db()

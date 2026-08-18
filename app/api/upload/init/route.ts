@@ -28,7 +28,7 @@ interface InitBody {
  * 14,999,999,999.
  */
 export const POST = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   const body = await jsonBody<InitBody>(req)
   if (!body) return fail('Malformed request body')
 
@@ -98,7 +98,7 @@ export const POST = route(async (req: Request) => {
       now + LIMITS.stagingTtlMs,
       folderId,
       body.encMeta ?? null,
-      clientCountry(),
+      await clientCountry(),
     )
 
   audit({

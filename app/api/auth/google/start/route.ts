@@ -41,7 +41,7 @@ export const GET = route(
     }
 
     if (mode === 'link') {
-      const user = currentUser()
+      const user = await currentUser()
       if (!user) return fail('Sign in first', 401)
       if (user.google_sub) return fail('This account is already linked to Google', 409)
       linkUserId = user.id
@@ -52,7 +52,8 @@ export const GET = route(
     // Binds the callback to this browser. sameSite 'lax' is required: the
     // callback arrives as a top-level navigation from accounts.google.com, and
     // 'strict' would withhold the cookie exactly when it is needed.
-    cookies().set(OAUTH_STATE_COOKIE, state, {
+    const jar = await cookies()
+    jar.set(OAUTH_STATE_COOKIE, state, {
       httpOnly: true,
       secure: PUBLIC_ORIGIN.startsWith('https://'),
       sameSite: 'lax',

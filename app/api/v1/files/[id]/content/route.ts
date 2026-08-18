@@ -17,10 +17,6 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 3600
 
-interface Ctx {
-  params: { id: string }
-}
-
 function loadOwned(id: string, user: UserRow): FileRow | null {
   const file = db().prepare(`SELECT * FROM files WHERE id = ?`).get(id) as FileRow | undefined
   if (!file || file.deleted_at || file.owner_id !== user.id) return null
@@ -40,7 +36,7 @@ function loadOwned(id: string, user: UserRow): FileRow | null {
  * Spending the burn budget is what a visitor following the share link does; an
  * owner pulling their own bytes back is not that.
  */
-export const GET = apiRoute<Ctx>(
+export const GET = apiRoute<{ id: string }>(
   async (req, { params }, { user }) => {
     const file = loadOwned(params.id, user)
     if (!file) return apiFail('File not found', 404)
@@ -55,7 +51,7 @@ export const GET = apiRoute<Ctx>(
       return apiFail('Encrypted files cannot be downloaded through the API', 409)
     }
 
-    const ip = clientIp()
+    const ip = await clientIp()
     if (ip && egressForIpToday(ip) > IP_DAILY_EGRESS_CAP) {
       return apiFail('Daily download limit reached for this address', 429)
     }

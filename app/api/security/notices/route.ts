@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
  * need to tell the caller whether the id existed.
  */
 export const POST = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   const body = await jsonBody<{ ids?: unknown }>(req)
 
   const ids = Array.isArray(body?.ids)

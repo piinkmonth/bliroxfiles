@@ -17,10 +17,11 @@ export const dynamic = 'force-dynamic'
  * an image written there while the server runs is never served. Reading from
  * disk on request is what lets a background appear the moment it is uploaded.
  */
-export const GET = route(async (_req: Request, { params }: { params: { name: string } }) => {
+export const GET = route(async (_req: Request, { params }: { params: Promise<{ name: string }> }) => {
+  const { name } = await params
   // Comes in from the URL, so it is validated as a path even though every
   // legitimate name here was written by our own upload route.
-  const abs = uploadedBackgroundPath(decodeURIComponent(params.name))
+  const abs = uploadedBackgroundPath(decodeURIComponent(name))
   if (!abs) return new Response('Not found', { status: 404 })
 
   const data = await fsp.readFile(abs).catch(() => null)

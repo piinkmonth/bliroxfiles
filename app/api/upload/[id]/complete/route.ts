@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 3600
 
 interface Params {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 /**
@@ -20,9 +20,10 @@ interface Params {
  * authenticates, loads and owns the session, and maps the result.
  */
 export const POST = route(async (_req: Request, { params }: Params) => {
-  const user = requireUser()
+  const { id } = await params
+  const user = await requireUser()
 
-  const session = getSession(params.id)
+  const session = getSession(id)
   if (!session) return fail('Upload session not found — it may have expired', 404)
   if (session.owner_id !== user.id) return fail('Upload session not found', 404)
 

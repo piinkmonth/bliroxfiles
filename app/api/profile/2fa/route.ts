@@ -25,7 +25,7 @@ const ISSUER = 'blirox/files'
  * they just scanned.
  */
 export const POST = route(async () => {
-  const user = requireUser()
+  const user = await requireUser()
   if (user.totp_enabled) return fail('Two-factor is already on for this account', 409)
 
   const secret = generateSecret()
@@ -54,7 +54,7 @@ interface ConfirmBody {
 
 /** Confirm a code and switch two-factor on, returning one-time backup codes. */
 export const PUT = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   if (user.totp_enabled) return fail('Two-factor is already on', 409)
   if (!user.totp_secret) return fail('Start enrolment first', 409)
 
@@ -88,7 +88,7 @@ export const PUT = route(async (req: Request) => {
     action: 'auth.2fa_enabled',
     targetType: 'user',
     targetId: user.id,
-    ip: clientIpForStorage(),
+    ip: await clientIpForStorage(),
   })
 
   // The only time these are ever shown; only hashes are kept.
@@ -108,7 +108,7 @@ interface DisableBody {
  * factor off the account.
  */
 export const DELETE = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   if (!user.totp_enabled) return fail('Two-factor is not on', 409)
 
   const body = await jsonBody<DisableBody>(req)
@@ -145,7 +145,7 @@ export const DELETE = route(async (req: Request) => {
     action: 'auth.2fa_disabled',
     targetType: 'user',
     targetId: user.id,
-    ip: clientIpForStorage(),
+    ip: await clientIpForStorage(),
   })
 
   return ok({ disabled: true })

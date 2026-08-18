@@ -27,8 +27,9 @@ export const dynamic = 'force-dynamic'
  * of this endpoint — publishing one is the point at which that trade is made,
  * and the dashboard says so before it is made.
  */
-export const GET = route(async (_req: Request, { params }: { params: { id: string } }) => {
-  const file = db().prepare(`SELECT * FROM files WHERE id = ?`).get(params.id) as
+export const GET = route(async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params
+  const file = db().prepare(`SELECT * FROM files WHERE id = ?`).get(id) as
     | FileRow
     | undefined
 
@@ -36,7 +37,7 @@ export const GET = route(async (_req: Request, { params }: { params: { id: strin
   if (!file.encrypted || !file.enc_meta) return fail('That file is not encrypted', 400)
 
   if (!file.enc_share) {
-    const viewer = currentUser()
+    const viewer = await currentUser()
     if (!viewer || !fileAccess(file, viewer.id)) return fail('File not found', 404)
   }
 

@@ -62,12 +62,12 @@ export function apiOptions(): Response {
 }
 
 /** Pull and verify the bearer token, or throw the right AuthError. */
-function requireBearer(req: Request): AuthedToken {
+async function requireBearer(req: Request): Promise<AuthedToken> {
   const header = req.headers.get('authorization') ?? ''
   const match = /^Bearer\s+(.+)$/i.exec(header.trim())
   if (!match) throw new AuthError('Missing API token — send it as: Authorization: Bearer <token>', 401)
 
-  const auth = verifyToken(match[1].trim())
+  const auth = await verifyToken(match[1].trim())
   if (!auth) throw new AuthError('Invalid, expired, or revoked API token', 401)
   return auth
 }
@@ -84,17 +84,17 @@ export interface ApiRouteOptions {
  * limiting, CORS, and uniform error handling. The authenticated `{ user,
  * token, scopes }` is injected as the handler's third argument.
  */
-export function apiRoute<Ctx>(
-  handler: (req: Request, ctx: Ctx, auth: AuthedToken) => Promise<Response>,
+export function apiRoute<P = Record<string, never>>(
+  handler: (req: Request, ctx: { params: P }, auth: AuthedToken) => Promise<Response>,
   options: ApiRouteOptions,
-): (req: Request, ctx: Ctx) => Promise<Response> {
-  return async (req: Request, ctx: Ctx) => {
+): (req: Request, ctx: { params: Promise<P> }) => Promise<Response> {
+  return async (req: Request, ctx: { params: Promise<P> }) => {
     if (req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_PREFLIGHT })
     }
 
     try {
-      const auth = requireBearer(req)
+      const auth = await requireBearer(req)
 
       if (!auth.scopes.has(options.scope)) {
         throw new AuthError(`This token lacks the '${options.scope}' scope`, 403)
@@ -103,7 +103,10 @@ export function apiRoute<Ctx>(
       const rl = consume(options.limit, auth.token.id)
       if (!rl.allowed) return withCors(tooMany(rl, 'API rate limit exceeded — slow down'))
 
-      return withCors(await handler(req, ctx, auth))
+      // params is a Promise in Next 15+. resolve it once here so each v1 handler
+      // keeps reading params.id synchronously instead of awaiting in every route.
+      const params = await ctx.params
+      return withCors(await handler(req, { params }, auth))
     } catch (err) {
       if (err instanceof AuthError) return apiFail(err.message, err.status)
       console.error('[api/v1]', err)

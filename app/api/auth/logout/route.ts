@@ -7,11 +7,12 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export const POST = route(async () => {
-  const user = currentUser()
-  const token = cookies().get(SESSION_COOKIE)?.value
+  const user = await currentUser()
+  const jar = await cookies()
+  const token = jar.get(SESSION_COOKIE)?.value
 
   if (token) destroySession(token)
-  cookies().delete(SESSION_COOKIE)
+  jar.delete(SESSION_COOKIE)
 
   if (user) {
     audit({

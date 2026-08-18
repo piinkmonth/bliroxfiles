@@ -6,8 +6,8 @@ import { InvitesClient } from './InvitesClient'
 
 export const dynamic = 'force-dynamic'
 
-export default function InvitesPage() {
-  const user = currentUser()
+export default async function InvitesPage() {
+  const user = await currentUser()
   if (!user || !hasRole(user, 'admin')) redirect('/admin')
 
   const invites = listInvites().map((i) => ({

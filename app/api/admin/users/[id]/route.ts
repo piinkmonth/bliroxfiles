@@ -17,10 +17,11 @@ interface PatchBody {
   verifiedNote?: string
 }
 
-export const PATCH = route(async (req: Request, { params }: { params: { id: string } }) => {
-  const admin = requireRole('admin')
+export const PATCH = route(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params
+  const admin = await requireRole('admin')
 
-  const target = db().prepare(`SELECT * FROM users WHERE id = ?`).get(params.id) as
+  const target = db().prepare(`SELECT * FROM users WHERE id = ?`).get(id) as
     | UserRow
     | undefined
   if (!target) return fail('User not found', 404)

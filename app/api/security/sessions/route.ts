@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 /** Turn the geo guard on or off for the caller's own account. */
 export const PATCH = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   const body = await jsonBody<{ geoGuard?: boolean }>(req)
   if (typeof body?.geoGuard !== 'boolean') return fail('geoGuard must be true or false')
 
@@ -36,9 +36,9 @@ export const PATCH = route(async (req: Request) => {
  * someone else's session.
  */
 export const DELETE = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   const target = new URL(req.url).searchParams.get('token')
-  const current = cookies().get(SESSION_COOKIE)?.value ?? ''
+  const current = (await cookies()).get(SESSION_COOKIE)?.value ?? ''
 
   if (target) {
     if (target === current) return fail('That is the session you are using — sign out instead')

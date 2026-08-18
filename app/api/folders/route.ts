@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export const GET = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   const url = new URL(req.url)
 
   if (url.searchParams.get('all') === '1') {
@@ -29,7 +29,7 @@ interface CreateBody {
 }
 
 export const POST = route(async (req: Request) => {
-  const user = requireUser()
+  const user = await requireUser()
   const body = await jsonBody<CreateBody>(req)
   if (!body?.name) return fail('A folder name is required')
 

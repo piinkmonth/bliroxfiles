@@ -10,9 +10,11 @@ import { SettingsClient } from './SettingsClient'
 
 export const dynamic = 'force-dynamic'
 
-export default function SettingsPage() {
-  const user = currentUser()
+export default async function SettingsPage() {
+  const user = await currentUser()
   if (!user) redirect('/login')
+
+  const sessions = await sessionsForUser(user.id)
 
   return (
     <>
@@ -47,7 +49,7 @@ export default function SettingsPage() {
             user.totp_backup_codes ? (JSON.parse(user.totp_backup_codes) as string[]).length : 0
           }
           geoGuard={!!user.geo_guard}
-          sessions={sessionsForUser(user.id)}
+          sessions={sessions}
           apiTokens={listTokens(user.id).map(tokenView)}
         />
       </main>

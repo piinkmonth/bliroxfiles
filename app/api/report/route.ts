@@ -21,8 +21,8 @@ export const POST = route(async (req: Request) => {
 
   // Reports are open to signed-out visitors too — requiring an account to
   // report abuse would defeat the point. Rate limited by IP via route().
-  const ip = clientIp()
-  const storedIp = clientIpForStorage()
+  const ip = await clientIp()
+  const storedIp = await clientIpForStorage()
 
   const category = (body.category ?? 'other') as ReportCategory
   if (!CATEGORIES.includes(category)) return fail('Unknown report category')
@@ -32,7 +32,7 @@ export const POST = route(async (req: Request) => {
     | undefined
   if (!file) return fail('File not found', 404)
 
-  const viewer = currentUser()
+  const viewer = await currentUser()
   const id = newId()
 
   db()

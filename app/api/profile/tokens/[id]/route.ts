@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 interface Ctx {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 /**
@@ -18,9 +18,10 @@ interface Ctx {
  * record survive.
  */
 export const DELETE = route(async (_req: Request, { params }: Ctx) => {
-  const user = requireUser()
+  const { id } = await params
+  const user = await requireUser()
 
-  if (!revokeToken(user.id, params.id)) {
+  if (!revokeToken(user.id, id)) {
     return fail('Token not found', 404)
   }
 
@@ -29,7 +30,7 @@ export const DELETE = route(async (_req: Request, { params }: Ctx) => {
     actorName: user.username,
     action: 'token.revoke',
     targetType: 'token',
-    targetId: params.id,
+    targetId: id,
   })
 
   return ok({ revoked: true })

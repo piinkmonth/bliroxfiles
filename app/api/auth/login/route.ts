@@ -30,8 +30,8 @@ export const POST = route(async (req: Request) => {
   const password = body.password ?? ''
   if (!username || !password) return fail('Username and password are required')
 
-  const ip = clientIp()
-  const storedIp = clientIpForStorage()
+  const ip = await clientIp()
+  const storedIp = await clientIpForStorage()
 
   const user = db().prepare(`SELECT * FROM users WHERE username = ?`).get(username) as
     | UserRow
@@ -86,8 +86,9 @@ export const POST = route(async (req: Request) => {
     })
   }
 
-  const token = createSession(user.id, storedIp, userAgent())
-  cookies().set(SESSION_COOKIE, token, cookieOptions())
+  const token = await createSession(user.id, storedIp, await userAgent())
+  const jar = await cookies()
+  jar.set(SESSION_COOKIE, token, cookieOptions())
 
   audit({
     actorId: user.id,

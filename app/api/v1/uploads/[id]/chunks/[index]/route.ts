@@ -8,10 +8,6 @@ export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
 export const maxDuration = 3600
 
-interface Ctx {
-  params: { id: string; index: string }
-}
-
 /**
  * PUT /v1/uploads/:id/chunks/:index — receive one chunk.
  *
@@ -19,7 +15,7 @@ interface Ctx {
  * last chunk is the partial remainder. Re-sending a chunk that already landed
  * is a no-op (`alreadyHad: true`), so a client can retry a chunk freely.
  */
-export const PUT = apiRoute<Ctx>(
+export const PUT = apiRoute<{ id: string; index: string }>(
   async (req, { params }, { user }) => {
     const session = getSession(params.id)
     if (!session) return apiFail('Upload session not found — it may have expired', 404)
