@@ -85,9 +85,33 @@ export function pacedFileStream(opts: {
     }
   }
 
+  /*
+   * Once the consumer cancels, the controller is closed, and enqueue/close/error
+   * on a closed controller throw ERR_INVALID_STATE. That happens routinely: the
+   * client closes the tab, or the media player seeks and abandons the range
+   * request it had in flight. The handlers below run inside ReadStream listeners
+   * rather than a promise, so a throw there is an uncaughtException that takes
+   * the process down — not a single failed response.
+   *
+   * `done` is the guard on every controller touch. The paced resume timer has to
+   * be cleared alongside it, or it fires into an already-destroyed stream and
+   * keeps the closure alive until it does.
+   */
+  let done = false
+  let resumeTimer: ReturnType<typeof setTimeout> | null = null
+  const finish = () => {
+    done = true
+    if (resumeTimer) {
+      clearTimeout(resumeTimer)
+      resumeTimer = null
+    }
+    release()
+  }
+
   return new ReadableStream<Uint8Array>({
     start(controller) {
       handle.on('data', (raw: string | Buffer) => {
+        if (done) return
         // No encoding is set on the stream, so this is always a Buffer.
         const chunk = raw as Buffer
         total += chunk.length
@@ -99,25 +123,33 @@ export function pacedFileStream(opts: {
         const rate = currentRate(perConnectionMax)
         if (rate > 0) {
           handle.pause()
-          setTimeout(() => handle.resume(), (chunk.length / rate) * 1000)
+          resumeTimer = setTimeout(() => {
+            resumeTimer = null
+            if (!done) handle.resume()
+          }, (chunk.length / rate) * 1000)
         }
       })
 
       handle.on('end', () => {
-        release()
+        if (done) return
+        finish()
         controller.close()
       })
 
+      // destroy() can itself emit an error (premature close), which lands here
+      // after a cancel — hence the same guard.
       handle.on('error', (err) => {
-        release()
+        if (done) return
+        finish()
         controller.error(err)
       })
     },
 
     cancel() {
-      // Client hung up mid-download — stop reading and free the slot.
+      // Client hung up mid-download — stop reading and free the slot. No
+      // controller calls here: cancel() is the thing that closed it.
+      finish()
       handle.destroy()
-      release()
     },
   })
 }
