@@ -1,4 +1,4 @@
-# Secrets. Never commit these — a leaked client secret or encryption key has to
+# Secrets. Never commit these. A leaked client secret or encryption key has to
 # be rotated, not deleted, because git keeps the history.
 .env
 .env.*
@@ -24,6 +24,7 @@ Thumbs.db
 *.swp
 .vscode/
 .idea/
+.claude/
 
 # Logs
 *.log
